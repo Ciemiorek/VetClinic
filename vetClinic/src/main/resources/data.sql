@@ -1,0 +1,11 @@
+INSERT INTO customer(id,name, surname, id_for_authorization, pin) VALUES (0,'Kuba','Jakubowicz',1000,9999);
+INSERT INTO customer(id,name, surname, id_for_authorization, pin) VALUES (1,'Marek','Markowicz',1001,9999);
+INSERT INTO customer(id,name, surname, id_for_authorization, pin) VALUES (2,'Dariusz','Darek',1002,9999);
+INSERT INTO doctor(id,name, surname) VALUES (0,'Mariusz','Marek');
+INSERT INTO doctor(id,name, surname) VALUES (1,'TOmek','Tomasz');
+INSERT INTO appointment (id,date,end_time,start_time,customer_id,doctor_id) values (1,DATE '2015-12-17','12:30','12:40',1,1);
+INSERT INTO appointment (id,date,end_time,start_time,customer_id,doctor_id) values (2,DATE '2015-12-16','12:12','12:30',1,1);
+INSERT INTO appointment (id,date,end_time,start_time,customer_id,doctor_id) values (3,DATE '2015-12-17','12:12','12:30',1,1);
+INSERT INTO appointment (id,date,end_time,start_time,customer_id,doctor_id) values (4,DATE '2015-12-17','12:12','12:30',1,0);
+INSERT INTO appointment (id,date,end_time,start_time,customer_id,doctor_id) values (5,DATE '2022-10-10','13:00','12:00',1,0);
+INSERT INTO appointment (id,date,end_time,start_time,customer_id,doctor_id) values (6,DATE '2022-10-10','15:00','14:00',1,0);

@@ -1,4 +1,5 @@
 package com.ciemiorek.artur.vetClinic.api.response;
 
-public class DeleteAppointmentResponse {
+public class DeleteAppointmentResponse extends BasicResponse {
+
 }

@@ -1,4 +1,10 @@
 package com.ciemiorek.artur.vetClinic.repositories;
 
-public class CustomerRepository {
+import com.ciemiorek.artur.vetClinic.models.Customer;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+
+
+public interface CustomerRepository extends JpaRepository<Customer, Long> {
+
 }

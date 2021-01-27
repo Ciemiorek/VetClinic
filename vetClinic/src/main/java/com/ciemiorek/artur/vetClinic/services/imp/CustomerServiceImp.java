@@ -1,6 +1,8 @@
 package com.ciemiorek.artur.vetClinic.services.imp;
 
 import com.ciemiorek.artur.vetClinic.api.request.AppointmentRequest;
+import com.ciemiorek.artur.vetClinic.api.request.DeleteAppointmentRequest;
+import com.ciemiorek.artur.vetClinic.api.response.BasicResponse;
 import com.ciemiorek.artur.vetClinic.api.response.CreateAppointmentResponse;
 import com.ciemiorek.artur.vetClinic.api.response.ListOfAppointmentByDoctorResponse;
 import com.ciemiorek.artur.vetClinic.common.MsgSource;
@@ -42,14 +44,14 @@ public class CustomerServiceImp extends AbstractCommonService implements Custome
     @Override
     @Transactional
     public ResponseEntity<CreateAppointmentResponse> createAppointment(AppointmentRequest appointmentRequest) {
-        checkPinAndIdAuto(appointmentRequest);
+        checkPinAndIdAuthorization(appointmentRequest.getCustomerId(),appointmentRequest.getCustomerIdAuthorization(),appointmentRequest.getCustomerPin());
         checkIsDateFuture(parsStringToLocalDate(appointmentRequest.getDate()));
         Appointment appointment = requestToAppointment(appointmentRequest);
         checkIsDoctorIsFree(appointmentRequest);
         appointment = appointmentRepository.save(appointment);
         System.out.println(appointment.getId());
 
-        return ResponseEntity.ok(new CreateAppointmentResponse(msgSource.OK001,appointment.getId()));
+        return ResponseEntity.ok(new CreateAppointmentResponse(msgSource.OK001, appointment.getId()));
     }
 
 
@@ -58,11 +60,21 @@ public class CustomerServiceImp extends AbstractCommonService implements Custome
     public ResponseEntity<ListOfAppointmentByDoctorResponse> getDoctorAppointmentAtDay(Long id, String date) {
 
         Doctor doctor = getDoctorFromRepository(id);
-        List<Appointment> appointmentList = extractDoctorsAllAppointmentsByDay(id,date);
+        List<Appointment> appointmentList = extractDoctorsAllAppointmentsByDay(id, date);
         String namePlusSurname = doctor.getName() + " " + doctor.getSurname();
         ListOfAppointmentByDoctorResponse response = new ListOfAppointmentByDoctorResponse(msgSource.OK002, namePlusSurname, appointmentList);
 
         return ResponseEntity.ok(response);
+    }
+
+    @Override
+    @Transactional
+    public ResponseEntity<BasicResponse> deleteAppointment(DeleteAppointmentRequest deleteAppointmentRequest) {
+      checkPinAndIdAuthorization(deleteAppointmentRequest.getCustomerId(),deleteAppointmentRequest.getCustomerIdAuthorization(),deleteAppointmentRequest.getCustomerPin());
+      checkIsAppointmentExist(deleteAppointmentRequest.getAppointmentId());
+      appointmentRepository.deleteById(deleteAppointmentRequest.getAppointmentId());
+
+        return ResponseEntity.ok(BasicResponse.of(msgSource.OK003));
     }
 
     private Customer getCustomersFromRepository(Long customerId) {
@@ -73,7 +85,7 @@ public class CustomerServiceImp extends AbstractCommonService implements Custome
         return optionalCustomer.get();
     }
 
-    private List<Appointment> extractDoctorsAllAppointmentsByDay(Long doctorId,String date) {
+    private List<Appointment> extractDoctorsAllAppointmentsByDay(Long doctorId, String date) {
         List<Appointment> appointmentList = appointmentRepository.findByDoctorId(doctorId);
         LocalDate localDate = parsStringToLocalDate(date);
         if (appointmentList.isEmpty()) {
@@ -102,8 +114,8 @@ public class CustomerServiceImp extends AbstractCommonService implements Custome
         return localDate;
     }
 
-    private void checkIsDateFuture(LocalDate localDate){
-        if (0>localDate.compareTo(LocalDate.now())){
+    private void checkIsDateFuture(LocalDate localDate) {
+        if (0 > localDate.compareTo(LocalDate.now())) {
             throw new CommonConflictException(msgSource.Err007);
         }
     }
@@ -141,38 +153,68 @@ public class CustomerServiceImp extends AbstractCommonService implements Custome
         return appointment;
     }
 
-    private void checkPinAndIdAuto(AppointmentRequest appointmentRequest){
-        Customer customer = getCustomersFromRepository(appointmentRequest.getCustomerId());
-        if (!(customer.getPin().equals(appointmentRequest.getCustomerPin())||customer.getIdForAuto().equals(appointmentRequest.getCustomerIdAuto()))){
+    private void checkPinAndIdAuthorization(Long customersId, String idAuthorization, String pin) {
+        Customer customer = getCustomersFromRepository(customersId);
+        if (!(customer.getPin().equals(pin) || customer.getIdForAuthorization().equals(idAuthorization))){
             throw new CommonConflictException(msgSource.Err006);
         }
     }
 
-    private void checkIsDoctorIsFree(AppointmentRequest appointmentRequest){
-       try {
-        extractDoctorsAllAppointmentsByDay(appointmentRequest.getDoctorId(), appointmentRequest.getDate());
-       }catch (Exception e){
-           return;
-       }
+    private boolean appointmentsAtTheSameTime(Appointment appointment, LocalTime start, LocalTime end) {
+        LocalTime startFirstAppointment = appointment.getStartTime();
+        LocalTime endFirstAppointment = appointment.getEndTime();
+        System.out.println("Rozważane spotkanie data , start, koniec");
+        System.out.println("                  "+appointment.getDate().toString() +" "+startFirstAppointment.toString()+" "+endFirstAppointment.toString()       );
+        if (startFirstAppointment.compareTo(end) == 0 && startFirstAppointment.compareTo(start) == 1) {
+            System.out.println("false 1");
+            return false;
+        } else if (endFirstAppointment.compareTo(start) == 0 && endFirstAppointment.compareTo(end) == -1) {
+            System.out.println("false 2");
+            return false;
+
+        } else if (startFirstAppointment.compareTo(start)==1&&startFirstAppointment.compareTo(end)==1||endFirstAppointment.compareTo(start)==-1&&endFirstAppointment.compareTo(end)==-1) {
+            System.out.println("false 3");
+            return false;
+        }
+        System.out.println("true");
+        return true;
+    }
+    private void checkIsDoctorIsFree(AppointmentRequest appointmentRequest) {
+        try {
+            extractDoctorsAllAppointmentsByDay(appointmentRequest.getDoctorId(), appointmentRequest.getDate());
+        } catch (Exception e) {
+            return;
+        }
         List<Appointment> doctorAppointmentsList = extractDoctorsAllAppointmentsByDay(appointmentRequest.getDoctorId(), appointmentRequest.getDate());
 
         LocalTime start = parsStringToLocalTime(appointmentRequest.getStartTime());
         LocalTime end = parsStringToLocalTime(appointmentRequest.getEndTime());
-        for (Appointment appointment:doctorAppointmentsList){
-            System.out.println("Data Spotkania "+appointment.getDate().toString());
-            System.out.println("Spotkania juz umowione " + appointment.getStartTime().toString()+" "+appointment.getEndTime().toString());
-            System.out.println("Spotkanie planowane" + start+"  "+ end);
-            System.out.println("rożnica miedzy startem a koncem"+ appointment.getStartTime().compareTo(start)+"  "+appointment.getStartTime().compareTo(end));
+        for (Appointment appointment : doctorAppointmentsList) {
+
+            if (appointmentsAtTheSameTime(appointment, start, end)) {
+                throw new CommonConflictException(msgSource.Err008);
+            }
         }
 
 
-        doctorAppointmentsList =doctorAppointmentsList.stream()
-                .filter(a->a.getStartTime().compareTo(start)==a.getStartTime().compareTo(end))
-                .filter(a->a.getEndTime().compareTo(start)==a.getEndTime().compareTo(end))
-                .filter(a->a.getStartTime().compareTo(start)==a.getEndTime().compareTo(start))
-                .collect(Collectors.toList());
+////        doctorAppointmentsList =doctorAppointmentsList.stream()
+////                .filter(a->a.getStartTime().compareTo(start)==a.getStartTime().compareTo(end))
+////                .filter(a->a.getEndTime().compareTo(start)==a.getEndTime().compareTo(end))
+////                .filter(a->a.getStartTime().compareTo(start)==a.getEndTime().compareTo(start))
+////                .collect(Collectors.toList());
+//
+//        doctorAppointmentsList = doctorAppointmentsList.stream()
+//                .filter(a -> a.getStartTime().compareTo(start) == a.getEndTime().compareTo(start))
+//                .filter(a->a.getStartTime().compareTo(end)==a.getEndTime().compareTo(end))
+//                .collect(Collectors.toList());
+//
+//            if ()
 
-
+    }
+    private void checkIsAppointmentExist(Long appointmentId){
+        if(!appointmentRepository.existsById(appointmentId)){
+            throw new CommonConflictException(msgSource.Err009);
+        }
     }
 
 }

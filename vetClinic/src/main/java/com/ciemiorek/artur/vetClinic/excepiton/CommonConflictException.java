@@ -1,6 +1,10 @@
 package com.ciemiorek.artur.vetClinic.excepiton;
 
-public class CommonConflictException extends Throwable {
-    public CommonConflictException(Object p0) {
+
+import com.ciemiorek.artur.vetClinic.common.ConstErrorMsg;
+
+public class CommonConflictException extends CommonException{
+    public CommonConflictException(ConstErrorMsg constErrorMsg) {
+        super(constErrorMsg);
     }
 }
