@@ -1,4 +1,4 @@
-package com.ciemiorek.artur.vetClinic;
+package com.ciemiorek.artur.vetClinic.common;
 
 import org.h2.tools.Server;
 import org.springframework.context.annotation.Bean;
