@@ -21,7 +21,6 @@ public class Customer {
     private String pin;
 
     @OneToMany
-    @JoinColumn(name = "appointment_id")
     private Set<Appointment> appointments;
 
 

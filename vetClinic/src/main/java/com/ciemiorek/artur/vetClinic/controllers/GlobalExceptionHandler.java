@@ -26,7 +26,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler
     @ResponseStatus(HttpStatus.CONFLICT)
     @ResponseBody
-    BasicResponse handleBadRequestException (CommonConflictException exception) {
+    BasicResponse handleConflictExceptionException (CommonConflictException exception) {
         return BasicResponse.ofError(
                 exception.getConstErrorMsg().getErrorCode(),
                 exception.getConstErrorMsg().getErrorMsg()
